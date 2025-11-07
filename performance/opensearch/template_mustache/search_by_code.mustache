@@ -1,0 +1,12 @@
+{
+  "query": {
+    "bool": {
+      "must": [
+        { "term": { "id_document.keyword": "{{id_document}}" } },
+        { "term": { "producto.codigo.keyword": "{{codigo}}" } }
+      ]
+    }
+  },
+  "size": 10
+}
+

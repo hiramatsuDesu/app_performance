@@ -1,0 +1,9 @@
+Django
+djangorestframework
+psycopg2-binary
+opensearch-py
+python-dotenv
+gunicorn
+django-prometheus
+prometheus-client
+debugpy

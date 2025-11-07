@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # --------- Postgres ---------
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user_api
+      POSTGRES_PASSWORD: pass_api
+      POSTGRES_DB: performance_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # --------- OpenSearch ---------
+  opensearch:
+    image: opensearchproject/opensearch:2.9.0
+    environment:
+      - cluster.name=opensearch-cluster
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+      - plugins.security.disabled=true
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.9.0
+    environment:
+      - OPENSEARCH_HOSTS=http://opensearch:9200
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    ports:
+      - "5601:5601"
+    depends_on:
+      - opensearch
+
+  # --------- Django App ---------
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+      - "5678:5678"
+    environment:
+      - DEBUG_MODE=True
+      - DJANGO_SETTINGS_MODULE=app_performance.settings
+      - DATABASE_URL=postgres://user_api:pass_api@postgres:5432/performance_db
+      - OPENSEARCH_HOST=http://opensearch:9200
+    depends_on:
+      - postgres
+      - opensearch
+
+
+  # --------- Prometheus ---------
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  # --------- Grafana ---------
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  opensearch_data:
